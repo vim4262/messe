@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Génie en Herbe — Bibliothèque</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ============ APP ============ -->
+  <div class="app" id="app">
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+      <div class="nav-left">
+        <span class="nav-bolt">⚡</span>
+        <span class="nav-brand">GÉNIE EN HERBE</span>
+      </div>
+      <div class="nav-tabs" id="navTabs">
+        <button class="nav-tab active" data-cat="all" onclick="selectCat(this)">Tous</button>
+        <button class="nav-tab" data-cat="Match officiel" onclick="selectCat(this)">Matchs officiels</button>
+        <button class="nav-tab" data-cat="Entraînement" onclick="selectCat(this)">Entraînements</button>
+      </div>
+      <div class="nav-right">
+        <button class="btn-nav-upload" onclick="openUploadModal()">+ Déposer</button>
+      </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="hero-bg-lines"></div>
+      <div class="hero-inner">
+        <div class="hero-text" id="heroText">
+          <span class="hero-eyebrow">Saison 2024 – 2025</span>
+          <h1 class="hero-title">Bibliothèque<br/><em>des Matchs</em></h1>
+          <p class="hero-desc">Tous vos documents de compétition, disponibles à tout moment, depuis n'importe quel appareil.</p>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-block">
+            <div class="stat-num" id="statTotal">0</div>
+            <div class="stat-lbl">Documents</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-block">
+            <div class="stat-num" id="statOfficial">0</div>
+            <div class="stat-lbl">Officiels</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-block">
+            <div class="stat-num" id="statTrain">0</div>
+            <div class="stat-lbl">Entraînements</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Rechercher…" oninput="filterDocs()" />
+      </div>
+      <button class="btn-upload-toolbar" onclick="openUploadModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Déposer un PDF
+      </button>
+    </div>
+
+    <!-- DOCS GRID -->
+    <main class="docs-section">
+      <div class="docs-grid" id="docsGrid">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">📂</div>
+          <p class="empty-title">Aucun document pour l'instant</p>
+          <p class="empty-sub">Déposez votre premier PDF pour démarrer la bibliothèque du club.</p>
+          <button class="btn-primary" onclick="openUploadModal()">Déposer un PDF</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- UPLOAD MODAL -->
+    <div class="modal-overlay" id="uploadModal" onclick="closeUploadModal(event)">
+      <div class="modal-box">
+        <button class="modal-close" onclick="closeUploadModal()">✕</button>
+        <h2 class="modal-title">Déposer un document</h2>
+        <p class="modal-sub">Tous les champs sont requis</p>
+
+        <div class="form-group">
+          <label>Titre du document</label>
+          <input type="text" id="docTitle" placeholder="Ex : Finale régionale — Mars 2025" maxlength="100" />
+        </div>
+
+        <div class="form-group">
+          <label>Catégorie</label>
+          <div class="cat-toggle">
+            <button class="cat-tog active" data-val="Match officiel" onclick="selectUploadCat(this)">Match officiel</button>
+            <button class="cat-tog" data-val="Entraînement" onclick="selectUploadCat(this)">Entraînement</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="docDate" />
+        </div>
+
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+          <p class="drop-text">Glissez votre PDF ici ou <span>parcourez</span></p>
+          <p class="drop-hint" id="dropHint">PDF uniquement · 10 MB max</p>
+          <input type="file" id="pdfInput" accept=".pdf" style="display:none" onchange="onFileSelect(this)" />
+        </div>
+
+        <div class="progress-wrap" id="progressWrap" style="display:none">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <span class="progress-label" id="progressLabel">Chargement…</span>
+        </div>
+
+        <button class="btn-primary btn-full" onclick="submitUpload()">Enregistrer le document</button>
+      </div>
+    </div>
+
+    <!-- VIEWER MODAL -->
+    <div class="modal-overlay viewer-overlay" id="viewerModal" onclick="closeViewer(event)">
+      <div class="viewer-box">
+        <div class="viewer-header">
+          <div class="viewer-meta">
+            <span class="viewer-badge" id="viewerCat">—</span>
+            <span class="viewer-title" id="viewerTitle">—</span>
+          </div>
+          <div class="viewer-actions">
+            <button class="viewer-btn" onclick="downloadCurrent()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Télécharger
+            </button>
+            <button class="viewer-btn close-btn" onclick="closeViewer()">✕</button>
+          </div>
+        </div>
+        <iframe id="pdfFrame" class="pdf-frame" src=""></iframe>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
