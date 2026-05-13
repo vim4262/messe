@@ -1,31 +1,17 @@
 /* ============================================
    GÉNIE EN HERBE · app.js
-   Sécurité : anti-bruteforce, lockout,
-   session expirable, token signé, audit log
    ============================================ */
-
 'use strict';
 
-// ─────────────────────────────────────────────
-// CONFIGURATION — modifiez ici
-// ─────────────────────────────────────────────
-const CFG = {
-  // Taille max PDF en MB
-  MAX_MB: 10,
+const MAX_MB     = 10;
+const STORAGE_KEY = 'geh_docs_v2';
 
-  // Clé de stockage
-  STORAGE_KEY: 'geh_docs_v2',
-};
-
-// ─────────────────────────────────────────────
-// ÉTAT
-// ─────────────────────────────────────────────
-let allDocs = [];
+let allDocs      = [];
 let currentFilter = 'all';
 let currentDocUrl = null;
 let currentDocTitle = '';
 let currentDocCat = 'Match officiel';
-let selectedFile = null;
+let selectedFile  = null;
 
 // ─────────────────────────────────────────────
 // INIT
@@ -40,28 +26,26 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ─────────────────────────────────────────────
-// ════════════════ DONNÉES ════════════════════
+// DONNÉES (localStorage)
 // ─────────────────────────────────────────────
-
 function loadDocs() {
   try {
-    const raw = localStorage.getItem(CFG.STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     allDocs = raw ? JSON.parse(raw) : [];
   } catch { allDocs = []; }
 }
 
 function saveDocs() {
   try {
-    localStorage.setItem(CFG.STORAGE_KEY, JSON.stringify(allDocs));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
   } catch {
     showToast('Stockage plein. Supprimez des anciens documents.', 'error');
   }
 }
 
 // ─────────────────────────────────────────────
-// ════════════════ RENDU ══════════════════════
+// RENDU
 // ─────────────────────────────────────────────
-
 function renderAll() {
   renderStats();
   renderCards();
@@ -74,43 +58,36 @@ function renderStats() {
 }
 
 function renderCards() {
-  const grid = document.getElementById('docsGrid');
+  const grid  = document.getElementById('docsGrid');
   const empty = document.getElementById('emptyState');
   const query = (document.getElementById('searchInput')?.value || '').toLowerCase();
 
   grid.querySelectorAll('.doc-card').forEach(c => c.remove());
 
-  let filtered = allDocs.filter(doc => {
-    const matchCat = currentFilter === 'all' || doc.category === currentFilter;
-    const matchQ = doc.title.toLowerCase().includes(query) || doc.category.toLowerCase().includes(query);
-    return matchCat && matchQ;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const filtered = allDocs
+    .filter(doc => {
+      const matchCat = currentFilter === 'all' || doc.category === currentFilter;
+      const matchQ   = doc.title.toLowerCase().includes(query) || doc.category.toLowerCase().includes(query);
+      return matchCat && matchQ;
+    })
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (filtered.length === 0) {
     empty.style.display = 'block';
     return;
   }
   empty.style.display = 'none';
-
-  filtered.forEach((doc, i) => {
-    const card = buildCard(doc, i);
-    grid.appendChild(card);
-  });
+  filtered.forEach((doc, i) => grid.appendChild(buildCard(doc, i)));
 }
 
 function buildCard(doc, i) {
   const card = document.createElement('div');
   card.className = 'doc-card';
   card.style.animationDelay = `${i * 0.05}s`;
-
   const badgeClass = doc.category === 'Match officiel' ? 'badge-officiel' : 'badge-entrainement';
-
   card.innerHTML = `
     <div class="card-top">
-      <div class="card-pdf-mark">
-        <span>📄</span>
-        <small>PDF</small>
-      </div>
+      <div class="card-pdf-mark"><span>📄</span><small>PDF</small></div>
       <span class="card-badge ${badgeClass}">${escHtml(doc.category)}</span>
     </div>
     <div class="card-title">${escHtml(doc.title)}</div>
@@ -123,15 +100,13 @@ function buildCard(doc, i) {
       <button class="btn-read" onclick="openViewer('${doc.id}')">▶ Lire</button>
       <button class="btn-icon" title="Télécharger" onclick="downloadDoc('${doc.id}')">⬇</button>
       <button class="btn-icon del" title="Supprimer" onclick="deleteDoc('${doc.id}')">🗑</button>
-    </div>
-  `;
+    </div>`;
   return card;
 }
 
 // ─────────────────────────────────────────────
-// ════════════════ FILTRES ════════════════════
+// FILTRES
 // ─────────────────────────────────────────────
-
 function selectCat(btn) {
   currentFilter = btn.dataset.cat;
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
@@ -139,14 +114,11 @@ function selectCat(btn) {
   renderCards();
 }
 
-function filterDocs() {
-  renderCards();
-}
+function filterDocs() { renderCards(); }
 
 // ─────────────────────────────────────────────
-// ════════════════ UPLOAD ═════════════════════
+// UPLOAD
 // ─────────────────────────────────────────────
-
 function openUploadModal() {
   document.getElementById('uploadModal').classList.add('active');
 }
@@ -158,15 +130,14 @@ function closeUploadModal(event) {
 }
 
 function resetUploadForm() {
-  document.getElementById('uploadAdminPass').value = '';
   document.getElementById('docTitle').value = '';
   document.getElementById('pdfInput').value = '';
   document.getElementById('dropHint').textContent = 'PDF uniquement · 10 MB max';
   document.getElementById('dropZone').style.borderColor = '';
-  document.getElementById('dropZone').style.background = '';
+  document.getElementById('dropZone').style.background  = '';
   document.getElementById('progressWrap').style.display = 'none';
-  document.getElementById('progressFill').style.width = '0%';
-  selectedFile = null;
+  document.getElementById('progressFill').style.width   = '0%';
+  selectedFile  = null;
   currentDocCat = 'Match officiel';
   document.querySelectorAll('.cat-tog').forEach(b => {
     b.classList.toggle('active', b.dataset.val === 'Match officiel');
@@ -180,22 +151,16 @@ function selectUploadCat(btn) {
 }
 
 function onFileSelect(input) {
-  const file = input.files[0];
+  const file = input.files ? input.files[0] : input;
   if (!file) return;
-  if (file.type !== 'application/pdf') {
-    showToast('Veuillez sélectionner un fichier PDF.', 'error'); return;
-  }
-  if (file.size > CFG.MAX_MB * 1024 * 1024) {
-    showToast(`Fichier trop grand (max ${CFG.MAX_MB} MB).`, 'error'); return;
-  }
+  if (file.type !== 'application/pdf') { showToast('Veuillez sélectionner un fichier PDF.', 'error'); return; }
+  if (file.size > MAX_MB * 1024 * 1024) { showToast(`Fichier trop grand (max ${MAX_MB} MB).`, 'error'); return; }
   selectedFile = file;
-  const zone = document.getElementById('dropZone');
   document.getElementById('dropHint').textContent = `✅ ${file.name} — ${formatSize(file.size)}`;
-  zone.style.borderColor = 'var(--blue-lt)';
-  zone.style.background = 'var(--sky)';
-  if (!document.getElementById('docTitle').value) {
+  document.getElementById('dropZone').style.borderColor = 'var(--blue-lt)';
+  document.getElementById('dropZone').style.background  = 'var(--sky)';
+  if (!document.getElementById('docTitle').value)
     document.getElementById('docTitle').value = file.name.replace(/\.pdf$/i, '');
-  }
 }
 
 function setupDragAndDrop() {
@@ -206,23 +171,16 @@ function setupDragAndDrop() {
   zone.addEventListener('drop', e => {
     e.preventDefault(); zone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
-    if (file) {
-      const input = document.getElementById('pdfInput');
-      try {
-        const dt = new DataTransfer(); dt.items.add(file);
-        input.files = dt.files;
-      } catch {}
-      onFileSelect({ files: [file] });
-    }
+    if (file) { try { const dt = new DataTransfer(); dt.items.add(file); document.getElementById('pdfInput').files = dt.files; } catch {} onFileSelect(file); }
   });
 }
 
 function submitUpload() {
   const title = document.getElementById('docTitle').value.trim();
   const date  = document.getElementById('docDate').value;
-  if (!title)         { showToast('Entrez un titre.', 'error'); return; }
-  if (!selectedFile)  { showToast('Sélectionnez un fichier PDF.', 'error'); return; }
-  if (!date)          { showToast('Entrez la date du match.', 'error'); return; }
+  if (!title)        { showToast('Entrez un titre.', 'error'); return; }
+  if (!selectedFile) { showToast('Sélectionnez un fichier PDF.', 'error'); return; }
+  if (!date)         { showToast('Entrez la date du match.', 'error'); return; }
 
   const pw = document.getElementById('progressWrap');
   const pf = document.getElementById('progressFill');
@@ -230,51 +188,36 @@ function submitUpload() {
   pw.style.display = 'block';
 
   const reader = new FileReader();
-  reader.onprogress = e => {
-    if (e.lengthComputable) {
-      pf.style.width = Math.round((e.loaded / e.total) * 80) + '%';
-    }
-  };
+  reader.onprogress = e => { if (e.lengthComputable) pf.style.width = Math.round((e.loaded / e.total) * 80) + '%'; };
   reader.onload = e => {
-    pf.style.width = '95%';
-    pl.textContent = 'Enregistrement…';
+    pf.style.width = '95%'; pl.textContent = 'Enregistrement…';
     setTimeout(() => {
-      const doc = {
+      allDocs.push({
         id: 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-        title,
-        category: currentDocCat,
-        date,
+        title, category: currentDocCat, date,
         sizeLabel: formatSize(selectedFile.size),
         dataUrl: e.target.result,
         uploadedAt: new Date().toISOString(),
-      };
-      allDocs.push(doc);
+      });
       saveDocs();
       selectedFile = null;
-      pf.style.width = '100%';
-      pl.textContent = 'Enregistré !';
-      setTimeout(() => {
-        closeUploadModal();
-        renderAll();
-        showToast(`"${title}" ajouté avec succès ✓`, 'success');
-      }, 400);
+      pf.style.width = '100%'; pl.textContent = 'Enregistré !';
+      setTimeout(() => { closeUploadModal(); renderAll(); showToast(`"${title}" ajouté ✓`, 'success'); }, 400);
     }, 300);
   };
-  reader.onerror = () => showToast('Erreur de lecture du fichier.', 'error');
+  reader.onerror = () => showToast('Erreur de lecture.', 'error');
   reader.readAsDataURL(selectedFile);
 }
 
 // ─────────────────────────────────────────────
-// ════════════════ VIEWER ═════════════════════
+// VIEWER
 // ─────────────────────────────────────────────
-
 function openViewer(docId) {
   const doc = allDocs.find(d => d.id === docId);
   if (!doc) return;
-  currentDocUrl = doc.dataUrl;
-  currentDocTitle = doc.title;
+  currentDocUrl = doc.dataUrl; currentDocTitle = doc.title;
   document.getElementById('viewerTitle').textContent = doc.title;
-  document.getElementById('viewerCat').textContent = doc.category;
+  document.getElementById('viewerCat').textContent   = doc.category;
   document.getElementById('pdfFrame').src = doc.dataUrl;
   document.getElementById('viewerModal').classList.add('active');
 }
@@ -291,9 +234,8 @@ function downloadCurrent() {
 }
 
 // ─────────────────────────────────────────────
-// ════════════════ DOWNLOAD ═══════════════════
+// DOWNLOAD / DELETE
 // ─────────────────────────────────────────────
-
 function downloadDoc(docId) {
   const doc = allDocs.find(d => d.id === docId);
   if (!doc) return;
@@ -305,36 +247,25 @@ function triggerDownload(dataUrl, title) {
   const a = document.createElement('a');
   a.href = dataUrl;
   a.download = title.endsWith('.pdf') ? title : `${title}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
-
-// ─────────────────────────────────────────────
-// ════════════════ DELETE ═════════════════════
-// ─────────────────────────────────────────────
 
 function deleteDoc(docId) {
   const doc = allDocs.find(d => d.id === docId);
   if (!doc) return;
   if (!confirm(`Supprimer "${doc.title}" ?\nCette action est irréversible.`)) return;
   allDocs = allDocs.filter(d => d.id !== docId);
-  saveDocs();
-  renderAll();
+  saveDocs(); renderAll();
   showToast(`"${doc.title}" supprimé.`, 'success');
 }
 
 // ─────────────────────────────────────────────
-// ════════════════ UTILITAIRES ════════════════
+// UTILITAIRES
 // ─────────────────────────────────────────────
-
 function formatDate(str) {
   if (!str) return '—';
-  try {
-    return new Date(str + 'T00:00:00').toLocaleDateString('fr-FR', {
-      day: 'numeric', month: 'long', year: 'numeric'
-    });
-  } catch { return str; }
+  try { return new Date(str + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  catch { return str; }
 }
 
 function formatSize(bytes) {
@@ -344,15 +275,12 @@ function formatSize(bytes) {
 }
 
 function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   if (!t) return;
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
+  t.textContent = msg; t.className = `toast ${type} show`;
   setTimeout(() => { t.className = 'toast'; }, 3500);
 }
